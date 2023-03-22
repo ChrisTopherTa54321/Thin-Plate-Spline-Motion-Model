@@ -1,7 +1,7 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
-from modules.util import AntiAliasInterpolation2d, TPS
+from .modules.util import AntiAliasInterpolation2d, TPS
 from torchvision import models
 import numpy as np
 
@@ -99,7 +99,7 @@ class GeneratorFullModel(torch.nn.Module):
         self.dropout_maxp = train_params['dropout_maxp']
         self.dropout_inc_epoch = train_params['dropout_inc_epoch']
         self.dropout_startp =train_params['dropout_startp']
-        
+
         if sum(self.loss_weights['perceptual']) != 0:
             self.vgg = Vgg19()
             if torch.cuda.is_available():
@@ -113,17 +113,17 @@ class GeneratorFullModel(torch.nn.Module):
         if self.bg_predictor:
             if(epoch>=self.bg_start):
                 bg_param = self.bg_predictor(x['source'], x['driving'])
-          
+
         if(epoch>=self.dropout_epoch):
             dropout_flag = False
             dropout_p = 0
         else:
-            # dropout_p will linearly increase from dropout_startp to dropout_maxp 
+            # dropout_p will linearly increase from dropout_startp to dropout_maxp
             dropout_flag = True
             dropout_p = min(epoch/self.dropout_inc_epoch * self.dropout_maxp + self.dropout_startp, self.dropout_maxp)
-        
+
         dense_motion = self.dense_motion_network(source_image=x['source'], kp_driving=kp_driving,
-                                                    kp_source=kp_source, bg_param = bg_param, 
+                                                    kp_source=kp_source, bg_param = bg_param,
                                                     dropout_flag = dropout_flag, dropout_p = dropout_p)
         generated = self.inpainting_network(x['source'], dense_motion)
         generated.update({'kp_source': kp_source, 'kp_driving': kp_driving})
@@ -154,7 +154,7 @@ class GeneratorFullModel(torch.nn.Module):
 
             generated['transformed_frame'] = transformed_frame
             generated['transformed_kp'] = transformed_kp
-        
+
             warped = transform_random.warp_coordinates(transformed_kp['fg_kp'])
             kp_d = kp_driving['fg_kp']
             value = torch.abs(kp_d - warped).mean()
@@ -170,7 +170,7 @@ class GeneratorFullModel(torch.nn.Module):
                 value += torch.abs(encode_map[i]-decode_map[-i-1]).mean()
 
             loss_values['warp_loss'] = self.loss_weights['warp_loss'] * value
-        
+
         # bg loss
         if self.bg_predictor and epoch >= self.bg_start and self.loss_weights['bg'] != 0:
             bg_param_reverse = self.bg_predictor(x['driving'], x['source'])

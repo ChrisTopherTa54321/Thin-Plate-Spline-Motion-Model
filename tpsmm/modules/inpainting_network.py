@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from modules.util import ResBlock2d, SameBlock2d, UpBlock2d, DownBlock2d
-from modules.dense_motion import DenseMotionNetwork
+from .util import ResBlock2d, SameBlock2d, UpBlock2d, DownBlock2d
+from .dense_motion import DenseMotionNetwork
 
 
 class InpaintingNetwork(nn.Module):
@@ -53,7 +53,7 @@ class InpaintingNetwork(nn.Module):
         return out
 
     def forward(self, source_image, dense_motion):
-        out = self.first(source_image) 
+        out = self.first(source_image)
         encoder_map = [out]
         for i in range(len(self.down_blocks)):
             out = self.down_blocks[i](out)
@@ -77,15 +77,15 @@ class InpaintingNetwork(nn.Module):
         warped_encoder_maps.append(out_ij)
 
         for i in range(self.num_down_blocks):
-            
+
             out = self.resblock[2*i](out)
             out = self.resblock[2*i+1](out)
             out = self.up_blocks[i](out)
-            
+
             encode_i = encoder_map[-(i+2)]
             encode_ij = self.deform_input(encode_i.detach(), deformation)
             encode_i = self.deform_input(encode_i, deformation)
-            
+
             occlusion_ind = 0
             if self.multi_mask:
                 occlusion_ind = i+1

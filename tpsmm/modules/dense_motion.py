@@ -1,17 +1,17 @@
 from torch import nn
 import torch.nn.functional as F
 import torch
-from modules.util import Hourglass, AntiAliasInterpolation2d, make_coordinate_grid, kp2gaussian
-from modules.util import to_homogeneous, from_homogeneous, UpBlock2d, TPS
+from .util import Hourglass, AntiAliasInterpolation2d, make_coordinate_grid, kp2gaussian
+from .util import to_homogeneous, from_homogeneous, UpBlock2d, TPS
 import math
 
 class DenseMotionNetwork(nn.Module):
     """
-    Module that estimating an optical flow and multi-resolution occlusion masks 
+    Module that estimating an optical flow and multi-resolution occlusion masks
                         from K TPS transformations and an affine transformation.
     """
 
-    def __init__(self, block_expansion, num_blocks, max_features, num_tps, num_channels, 
+    def __init__(self, block_expansion, num_blocks, max_features, num_tps, num_channels,
                  scale_factor=0.25, bg = False, multi_mask = True, kp_variance=0.01):
         super(DenseMotionNetwork, self).__init__()
 
@@ -30,7 +30,7 @@ class DenseMotionNetwork(nn.Module):
             up = []
             self.up_nums = int(math.log(1/scale_factor, 2))
             self.occlusion_num = 4
-            
+
             channel = [hourglass_output_size[-1]//(2**i) for i in range(self.up_nums)]
             for i in range(self.up_nums):
                 up.append(UpBlock2d(channel[i], channel[i]//2, kernel_size=3, padding=1))
@@ -40,7 +40,7 @@ class DenseMotionNetwork(nn.Module):
             for i in range(self.up_nums):
                 channel.append(hourglass_output_size[-1]//(2**(i+1)))
             occlusion = []
-            
+
             for i in range(self.occlusion_num):
                 occlusion.append(nn.Conv2d(channel[i], 1, kernel_size=(7, 7), padding=(3, 3)))
             self.occlusion = nn.ModuleList(occlusion)
@@ -52,7 +52,7 @@ class DenseMotionNetwork(nn.Module):
         self.bg = bg
         self.kp_variance = kp_variance
 
-        
+
     def create_heatmap_representations(self, source_image, kp_driving, kp_source):
 
         spatial_size = source_image.shape[2:]
@@ -80,7 +80,7 @@ class DenseMotionNetwork(nn.Module):
         identity_grid = identity_grid.repeat(bs, 1, 1, 1, 1)
 
         # affine background transformation
-        if not (bg_param is None):            
+        if not (bg_param is None):
             identity_grid = to_homogeneous(identity_grid)
             identity_grid = torch.matmul(bg_param.view(bs, 1, 1, 1, 3, 3), identity_grid.unsqueeze(-1)).squeeze(-1)
             identity_grid = from_homogeneous(identity_grid)
@@ -113,7 +113,7 @@ class DenseMotionNetwork(nn.Module):
         mask_bool =(drop == 0)
         X_exp = X_exp.masked_fill(mask_bool, 0)
         partition = X_exp.sum(dim=1, keepdim=True) + 1e-6
-        return X_exp / partition  
+        return X_exp / partition
 
     def forward(self, source_image, kp_driving, kp_source, bg_param = None, dropout_flag=False, dropout_p = 0):
         if self.scale_factor != 1:
@@ -133,7 +133,7 @@ class DenseMotionNetwork(nn.Module):
 
         prediction = self.hourglass(input, mode = 1)
 
-        contribution_maps = self.maps(prediction[-1]) 
+        contribution_maps = self.maps(prediction[-1])
         if(dropout_flag):
             contribution_maps = self.dropout_softmax(contribution_maps, dropout_p)
         else:
@@ -159,6 +159,6 @@ class DenseMotionNetwork(nn.Module):
                 occlusion_map.append(torch.sigmoid(self.occlusion[i+self.occlusion_num-self.up_nums](prediction)))
         else:
             occlusion_map.append(torch.sigmoid(self.occlusion[0](prediction[-1])))
-                
+
         out_dict['occlusion_map'] = occlusion_map # Multi-resolution Occlusion Masks
         return out_dict

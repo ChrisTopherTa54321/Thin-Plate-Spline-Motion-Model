@@ -8,20 +8,20 @@ from time import gmtime, strftime
 from shutil import copy
 from frames_dataset import FramesDataset
 
-from modules.inpainting_network import InpaintingNetwork
-from modules.keypoint_detector import KPDetector
-from modules.bg_motion_predictor import BGMotionPredictor
-from modules.dense_motion import DenseMotionNetwork
-from modules.avd_network import AVDNetwork
+from .modules.inpainting_network import InpaintingNetwork
+from .modules.keypoint_detector import KPDetector
+from .modules.bg_motion_predictor import BGMotionPredictor
+from .modules.dense_motion import DenseMotionNetwork
+from .modules.avd_network import AVDNetwork
 import torch
 from train import train
 from train_avd import train_avd
 from reconstruction import reconstruction
-import os 
+import os
 
 
 if __name__ == "__main__":
-    
+
     if sys.version_info[0] < 3:
         raise Exception("You must use Python 3 or higher. Recommended version is Python 3.9")
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     kp_detector = KPDetector(**config['model_params']['common_params'])
     dense_motion_network = DenseMotionNetwork(**config['model_params']['common_params'],
                                               **config['model_params']['dense_motion_params'])
-                                                           
+
     if torch.cuda.is_available():
         kp_detector.to(opt.device_ids[0])
         dense_motion_network.to(opt.device_ids[0])
