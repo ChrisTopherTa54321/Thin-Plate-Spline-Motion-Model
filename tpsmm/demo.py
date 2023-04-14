@@ -164,7 +164,7 @@ def main(opt):
     imageio.mimsave(opt.result_video, [img_as_ubyte(frame) for frame in predictions], fps=fps)
 
 
-def parseArgs():
+def getArgParser():
     parser = ArgumentParser()
     parser.add_argument("--config", required=True, help="path to config")
     parser.add_argument("--checkpoint", default='checkpoints/vox.pth.tar', help="path to checkpoint to restore")
@@ -183,8 +183,11 @@ def parseArgs():
                         help="Generate from the frame that is the most alligned with source. (Only for faces, requires face_aligment lib)")
 
     parser.add_argument("--cpu", dest="cpu", action="store_true", help="cpu mode.")
+    return parser
 
-    return parser.parse_args()
+
+def parseArgs(args=None):
+    return getArgParser().parse_args(args)
 
 
 if __name__ == "__main__":
